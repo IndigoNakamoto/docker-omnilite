@@ -25,9 +25,9 @@ jobs:
 
           LITECOIN_VERSION=${{matrix.version}}
           LATEST_LITECOIN_MAJOR_VERSION=$(find . -type d -maxdepth 1 -not -path '*/\.*' | sort -n | tail -n 1 | cut -c 3-)
-          PLATFORMS="linux/amd64"
+          PLATFORMS="linux/amd64" 
           PUSH=false
-          REPO=ruimarinho/litecoin-core
+          REPO=r${{ github.repository_owner }}/litecoin-core
           TAGS=()
 
           if [[ $GITHUB_REF == refs/tags/* ]]; then
@@ -111,3 +111,6 @@ jobs:
             --build-arg "VCS_REF=${GITHUB_SHA::8}" \
             $(printf "%s" "${TAGS[@]/#/ --tag }" ) \
             ${{ matrix.version }}/
+
+
+#Issue with line 28 AND 72, no AMD platform for OmniLite

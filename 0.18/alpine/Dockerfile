@@ -23,7 +23,7 @@ RUN make install
 RUN rm -rf ${BERKELEYDB_PREFIX}/docs
 
 # Build stage for OmniLite Litecoin Core 
-FROM alpine:3.9 as litecoin-core
+FROM alpine:3.9 as litecoin-omnilite
 
 COPY --from=berkeleydb /opt /opt
 
@@ -53,11 +53,11 @@ RUN set -ex \
     gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys "$key" ; \
   done
 
-ENV LITECOIN_VERSION=0.18.2
+ENV LITECOIN_VERSION=0.18.1
 ENV LITECOIN_PREFIX=/opt/litecoin-${LITECOIN_VERSION}
 
-RUN wget https://bitcoin.org/bin/bitcoin-core-${BITCOIN_VERSION}/SHA256SUMS.asc
-RUN wget https://bitcoin.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}.tar.gz
+# RUN wget https://github.com/OmniLite/omnilite/releases/download/v${OMNILITE_VERSION}/SHA256SUMS.asc \
+RUN wget https://github.com/OmniLite/omnilite/releases/download/v${OMNILITE_VERSION}-${TARGETPLATFORM}.tar.gz
 RUN gpg --verify SHA256SUMS.asc
 RUN grep " litecoin-${LITECOIN_VERSION}.tar.gz\$" SHA256SUMS.asc | sha256sum -c -
 RUN tar -xzf *.tar.gz
@@ -106,7 +106,7 @@ ENV LITECOIN_VERSION=0.18.1
 ENV LITECOIN_PREFIX=/opt/litecoin-${LITECOIN_VERSION}
 ENV PATH=${LITECOIN_PREFIX}/bin:$PATH
 
-COPY --from=litecoin-core /opt /opt
+COPY --from=litecoin-omnilite /opt /opt
 COPY docker-entrypoint.sh /entrypoint.sh
 
 VOLUME ["/home/litecoin/.litecoin"]
@@ -115,6 +115,6 @@ EXPOSE 9332 9333 19332 19333 19444
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-RUN litecoind -version | grep "Litecoin Core Daemon"
+RUN litecoind -version | grep "Litecoin OmniLite version v${LITECOIN_VERSION}"
 
 CMD ["litecoind"]
