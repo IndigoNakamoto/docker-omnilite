@@ -22,8 +22,8 @@ RUN make -j4
 RUN make install
 RUN rm -rf ${BERKELEYDB_PREFIX}/docs
 
-# Build stage for Bitcoin Core
-FROM alpine:3.9 as bitcoin-core
+# Build stage for OmniLite Litecoin Core 
+FROM alpine:3.9 as litecoin-core
 
 COPY --from=berkeleydb /opt /opt
 
@@ -53,23 +53,23 @@ RUN set -ex \
     gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys "$key" ; \
   done
 
-ENV BITCOIN_VERSION=0.18.1
-ENV BITCOIN_PREFIX=/opt/bitcoin-${BITCOIN_VERSION}
+ENV LITECOIN_VERSION=0.18.2
+ENV LITECOIN_PREFIX=/opt/litecoin-${LITECOIN_VERSION}
 
 RUN wget https://bitcoin.org/bin/bitcoin-core-${BITCOIN_VERSION}/SHA256SUMS.asc
 RUN wget https://bitcoin.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}.tar.gz
 RUN gpg --verify SHA256SUMS.asc
-RUN grep " bitcoin-${BITCOIN_VERSION}.tar.gz\$" SHA256SUMS.asc | sha256sum -c -
+RUN grep " litecoin-${LITECOIN_VERSION}.tar.gz\$" SHA256SUMS.asc | sha256sum -c -
 RUN tar -xzf *.tar.gz
 
-WORKDIR /bitcoin-${BITCOIN_VERSION}
+WORKDIR /litecoin-${LITECOIN_VERSION}
 
 RUN sed -i '/AC_PREREQ/a\AR_FLAGS=cr' src/univalue/configure.ac
 RUN sed -i '/AX_PROG_CC_FOR_BUILD/a\AR_FLAGS=cr' src/secp256k1/configure.ac
 RUN sed -i s:sys/fcntl.h:fcntl.h: src/compat.h
 RUN ./autogen.sh
 RUN ./configure LDFLAGS=-L`ls -d /opt/db*`/lib/ CPPFLAGS=-I`ls -d /opt/db*`/include/ \
-    --prefix=${BITCOIN_PREFIX} \
+    --prefix=${LITECOIN_PREFIX} \
     --mandir=/usr/share/man \
     --disable-tests \
     --disable-bench \
@@ -80,20 +80,18 @@ RUN ./configure LDFLAGS=-L`ls -d /opt/db*`/lib/ CPPFLAGS=-I`ls -d /opt/db*`/incl
     --with-daemon
 RUN make -j4
 RUN make install
-RUN strip ${BITCOIN_PREFIX}/bin/bitcoin-cli
-RUN strip ${BITCOIN_PREFIX}/bin/bitcoin-tx
-RUN strip ${BITCOIN_PREFIX}/bin/bitcoind
-RUN strip ${BITCOIN_PREFIX}/lib/libbitcoinconsensus.a
-RUN strip ${BITCOIN_PREFIX}/lib/libbitcoinconsensus.so.0.0.0
+RUN strip ${LITECOIN_PREFIX}/bin/litecoin-cli
+RUN strip ${LITECOIN_PREFIX}/bin/litecoin-tx
+RUN strip ${LITECOIN_PREFIX}/bin/litecoind
+RUN strip ${LITECOIN_PREFIX}/lib/liblitecoinconsensus.a
+RUN strip ${LITECOIN_PREFIX}/lib/liblitecoinconsensus.so.0.0.0
 
 # Build stage for compiled artifacts
 FROM alpine:3.9
 
-LABEL maintainer.0="João Fonseca (@joaopaulofonseca)" \
-  maintainer.1="Pedro Branco (@pedrobranco)" \
-  maintainer.2="Rui Marinho (@ruimarinho)"
+LABEL maintainer="Indigo Nakamoto (@indigo_nakamoto)"
 
-RUN adduser -S bitcoin
+RUN adduser -S litecoin
 RUN sed -i 's/http\:\/\/dl-cdn.alpinelinux.org/https\:\/\/alpine.global.ssl.fastly.net/g' /etc/apk/repositories
 RUN apk --no-cache add \
   boost \
@@ -103,20 +101,20 @@ RUN apk --no-cache add \
   libzmq \
   su-exec
 
-ENV BITCOIN_DATA=/home/bitcoin/.bitcoin
-ENV BITCOIN_VERSION=0.18.1
-ENV BITCOIN_PREFIX=/opt/bitcoin-${BITCOIN_VERSION}
-ENV PATH=${BITCOIN_PREFIX}/bin:$PATH
+ENV LITECOIN_DATA=/home/litecoin/.litecoin
+ENV LITECOIN_VERSION=0.18.1
+ENV LITECOIN_PREFIX=/opt/litecoin-${LITECOIN_VERSION}
+ENV PATH=${LITECOIN_PREFIX}/bin:$PATH
 
-COPY --from=bitcoin-core /opt /opt
+COPY --from=litecoin-core /opt /opt
 COPY docker-entrypoint.sh /entrypoint.sh
 
-VOLUME ["/home/bitcoin/.bitcoin"]
+VOLUME ["/home/litecoin/.litecoin"]
 
-EXPOSE 8332 8333 18332 18333 18444
+EXPOSE 9332 9333 19332 19333 19444
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-RUN bitcoind -version | grep "Bitcoin Core Daemon"
+RUN litecoind -version | grep "Litecoin Core Daemon"
 
-CMD ["bitcoind"]
+CMD ["litecoind"]
